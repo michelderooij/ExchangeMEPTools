@@ -1,0 +1,33 @@
+@{
+    RootModule        = 'ExchangeNamedProperties.psm1'
+    ModuleVersion     = '0.1.0'
+    GUID              = '2f72888d-bb2e-4b6e-9b3d-44f3fd1d7c93'
+    Author            = 'ExchangeNamedProperties contributors'
+    CompanyName       = 'Community'
+    Copyright         = '(c) ExchangeNamedProperties contributors'
+    Description       = 'Analyze, search, assess, and remove catalogued MAPI named properties from Exchange Server on-premises mailboxes through EWS.'
+    PowerShellVersion = '5.1'
+    FunctionsToExport = @(
+        'Connect-EWSSession'
+        'Disconnect-EWSSession'
+        'Get-EWSSession'
+        'Get-MailboxExtendedProperty'
+        'Search-MailboxExtendedProperty'
+        'Test-MailboxExtendedProperty'
+        'Remove-MailboxExtendedProperty'
+    )
+    CmdletsToExport   = @()
+    VariablesToExport = @()
+    AliasesToExport   = @(
+        'Connect-ExchangeNamedProperties'
+        'Disconnect-ExchangeNamedProperties'
+    )
+    PrivateData       = @{
+        PSData = @{
+            Tags         = @('Exchange', 'EWS', 'MAPI', 'NamedProperties')
+            LicenseUri   = 'https://opensource.org/license/mit'
+            ProjectUri   = 'https://github.com/'
+            ReleaseNotes = 'Initial implementation in progress.'
+        }
+    }
+}

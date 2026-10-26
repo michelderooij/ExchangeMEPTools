@@ -1,0 +1,50 @@
+{
+  "ExchangeServer": {
+    "Source": "Unknown",
+    "Limits": []
+  },
+  "ExchangeOnlineReference": {
+    "Source": "Microsoft Learn: Mailbox Named Properties Quota Exceeded",
+    "Url": "https://learn.microsoft.com/en-us/troubleshoot/exchange/outlook-issues/named-property-quota-exceeded#cause",
+    "Applicability": "Exchange Online reference only; not asserted to apply to Exchange Server",
+    "Limits": [
+      {
+        "Name": "TotalNamedProperties",
+        "Scope": "All namespaces in mailbox",
+        "Limit": 16384,
+        "PercentOfTotalQuota": 100,
+        "Kind": "HardLimit"
+      },
+      {
+        "Name": "InternetHeadersNamespaceUsage",
+        "Scope": "InternetHeaders namespace",
+        "PropertySetId": "00020386-0000-0000-c000-000000000046",
+        "Limit": 9830,
+        "PercentOfTotalQuota": 60,
+        "Kind": "NamespaceLimit"
+      },
+      {
+        "Name": "PublicStringsNamespaceUsage",
+        "Scope": "PublicStrings namespace",
+        "PropertySetId": "00020329-0000-0000-c000-000000000046",
+        "Limit": 3277,
+        "PercentOfTotalQuota": 20,
+        "Kind": "NamespaceLimit"
+      },
+      {
+        "Name": "NamespaceUsage",
+        "Scope": "Each distinct namespace GUID",
+        "Limit": 3277,
+        "PercentOfTotalQuota": 20,
+        "Kind": "PerNamespaceLimit"
+      },
+      {
+        "Name": "RepeatedPropertyNamePrefix",
+        "Scope": "Each global first-five-character property-name prefix",
+        "Limit": 1638,
+        "PercentOfTotalQuota": 10,
+        "Kind": "GlobalPrefixLimit"
+      }
+    ]
+  }
+}
