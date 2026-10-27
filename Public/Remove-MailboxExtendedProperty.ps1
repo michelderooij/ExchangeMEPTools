@@ -4,7 +4,7 @@ function Remove-MailboxExtendedProperty {
     Removes one explicitly selected MAPI extended property from matching mailbox items.
 
     .DESCRIPTION
-    Removes only the requested extended-property definition from each supplied item. It never deletes the mailbox item. Every input is validated and guarded by ShouldProcess, then approved removals are sent to EWS in batches: one batched bind and one batched update per batch. Progress is updated after each batch, and every input returns a structured result. Properties already absent from an item are reported as successful. Conflicts, access failures, and validation failures are reported separately.
+    Removes only the requested extended-property definition from each supplied item. It never deletes the mailbox item. Every input is validated and guarded by ShouldProcess, then approved removals are sent to EWS in batches: one batched bind and one batched update per batch. Progress is updated after each batch. Use PassThru to return structured results. Properties already absent from an item are reported as successful. Conflicts, access failures, and validation failures are reported separately.
 
     Configure the EWS connection with Connect-EWSSession before removal. The command uses the configured session and its cached service for the target mailbox.
 
@@ -24,7 +24,7 @@ function Remove-MailboxExtendedProperty {
     Rebind each batch after update and confirm the properties are absent.
 
     .PARAMETER PassThru
-    Include the originating search result on each structured removal result.
+    Return structured removal results including the originating search result, and display property identity and subject for actual removals.
 
     .EXAMPLE
     $matches | Remove-MailboxExtendedProperty -Identity user@contoso.com -WhatIf
@@ -88,6 +88,12 @@ function Remove-MailboxExtendedProperty {
             param($Entry)
 
             $removalCounts[$Entry.Outcome]++
+            if (-not $PassThru) {
+                if ($Entry.Outcome -eq 'Failed') {
+                    Write-Warning ("Removal failed for item '{0}': {1}: {2}" -f $Entry.ItemId, $Entry.ErrorCode, $Entry.ErrorMessage)
+                }
+                return
+            }
             if ($PassThru -and $Entry.Outcome -eq 'Removed') {
                 Write-Host ('ExtendedPropertyId: {0} | Subject: {1}' -f $Entry.Definition.Identity, $Entry.Subject)
             }
