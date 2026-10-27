@@ -192,7 +192,7 @@ If the on-premises Exchange shell does not return `NamedPropertiesCountQuota`, t
 
 ## Safe Removal
 
-Removal affects only the named property on an item. It never deletes the item. `-WhatIf` and `-Confirm` are supported; default conflict resolution is `AutoResolve`. Use `-Verify` to rebind and check that the property is absent.
+Removal affects only the named property on an item. It never deletes the item. `-WhatIf` and `-Confirm` are supported; conflict resolution is fixed to `AutoResolve`. Use `-Verify` to rebind and check that the property is absent. Configure the EWS connection with `Connect-EWSSession` before removal; the command reuses the configured session and its cached service for the target mailbox. EWS connection options are not accepted directly by Remove.
 
 ```powershell
 $matches | Remove-MailboxExtendedProperty -Identity user@contoso.com -WhatIf
@@ -200,9 +200,9 @@ $matches | Remove-MailboxExtendedProperty -Identity user@contoso.com -Confirm -V
 $matches | Remove-MailboxExtendedProperty -WhatIf
 ```
 
-When `Identity` is omitted, Remove infers it from each piped search result. It still requires `ItemId` and a selected typed property definition; inventory rows from `Get-MailboxExtendedProperty` alone cannot identify an item to modify. The command validates mailbox ownership and returns one structured result per input. Conflicts, access failures, validation failures, and transient server-busy responses are reported separately; a property already absent from its item is reported as successful.
+`MailboxExtendedProperty` accepts `Search-MailboxExtendedProperty` results from the pipeline or by name. Each input must include `ItemId` and its typed property definition; inventory rows from `Get-MailboxExtendedProperty` alone cannot identify an item to modify. When `Identity` is omitted, Remove infers the mailbox from each search result. The command validates mailbox ownership and returns one structured result per input. Conflicts, access failures, validation failures, and transient server-busy responses are reported separately; a property already absent from its item is reported as successful.
 
-All piped inputs are processed. Each input is validated and confirmed as it arrives; approved removals are then sent per mailbox in groups of `-BatchSize` (default 100): one batched EWS bind, one batched update for the changed items, and with `-Verify` one batched verification bind. Several properties on the same item are removed with a single update. A progress bar is updated after each batch, for example `Batch 2 of 5 | Processed 200 of 450 | Removed 180 | Already absent 15 | Skipped 0 | Failed 5`. Items are bound fresh, so the `ChangeKey` on search results is not used; `-ConflictResolution` applies to the bound item version.
+All piped inputs are processed. Each input is validated and confirmed as it arrives; approved removals are then sent per mailbox in groups of `-BatchSize` (default 100): one batched EWS bind, one batched update for the changed items, and with `-Verify` one batched verification bind. Several properties on the same item are removed with a single update. A progress bar is updated after each batch, for example `Batch 2 of 5 | Processed 200 of 450 | Removed 180 | Already absent 15 | Skipped 0 | Failed 5`. Items are bound fresh, so the `ChangeKey` on search results is not used.
 
 ## Cleanup Workflow
 

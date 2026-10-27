@@ -27,7 +27,7 @@ function Get-EwsItemBatch {
     $responses = Invoke-EwsRequestWithRetry -RetryCount $RetryCount -ScriptBlock {
         $Service.BindToItems($ewsItemIds, $propertySet)
     }
-    return , @($responses)
+    return $responses
 }
 
 function Update-EwsItemBatch {
@@ -39,9 +39,6 @@ function Update-EwsItemBatch {
         [Parameter(Mandatory = $true)]
         [object[]]$Item,
 
-        [ValidateSet('AutoResolve', 'AlwaysOverwrite', 'NeverOverwrite')]
-        [string]$ConflictResolution = 'AutoResolve',
-
         [ValidateRange(0, 10)]
         [int]$RetryCount = 3
     )
@@ -50,7 +47,7 @@ function Update-EwsItemBatch {
     foreach ($ewsItem in $Item) {
         $ewsItems.Add($ewsItem)
     }
-    $conflictMode = [Enum]::Parse([Microsoft.Exchange.WebServices.Data.ConflictResolutionMode], $ConflictResolution, $true)
+    $conflictMode = [Microsoft.Exchange.WebServices.Data.ConflictResolutionMode]::AutoResolve
 
     # UpdateItems returns one UpdateItemResponse per item, in request order. SaveOnly and SendToNone
     # prevent message or meeting update traffic when only a property is removed.
@@ -63,5 +60,5 @@ function Update-EwsItemBatch {
             [Microsoft.Exchange.WebServices.Data.SendInvitationsOrCancellationsMode]::SendToNone
         )
     }
-    return , @($responses)
+    return $responses
 }

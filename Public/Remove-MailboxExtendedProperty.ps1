@@ -6,14 +6,13 @@ function Remove-MailboxExtendedProperty {
     .DESCRIPTION
     Removes only the requested extended-property definition from each supplied item. It never deletes the mailbox item. Every input is validated and guarded by ShouldProcess, then approved removals are sent to EWS in batches: one batched bind and one batched update per batch. Progress is updated after each batch, and every input returns a structured result. Properties already absent from an item are reported as successful. Conflicts, access failures, and validation failures are reported separately.
 
+    Configure the EWS connection with Connect-EWSSession before removal. The command uses the configured session and its cached service for the target mailbox.
+
     .PARAMETER Identity
     Optional target mailbox SMTP address, alias, GUID, or another identifier resolvable by Get-Mailbox. If omitted, the mailbox is inferred from pipeline search results.
 
-    .PARAMETER MessagesWithExtendedProperty
-    Search-MailboxExtendedProperty results to process from the pipeline.
-
     .PARAMETER MailboxExtendedProperty
-    Optional typed property definition to remove. If omitted, the definition on each input result is used.
+    Search-MailboxExtendedProperty results with ItemId and a typed property definition to remove.
 
     .PARAMETER BatchSize
     Maximum number of removal requests sent in one batched EWS bind/update request. All inputs are processed; larger input sets use multiple batches. Default 100.
@@ -26,9 +25,6 @@ function Remove-MailboxExtendedProperty {
 
     .PARAMETER PassThru
     Include the originating search result on each structured removal result.
-
-    .PARAMETER ConflictResolution
-    EWS conflict resolution policy. AutoResolve is the default.
 
     .EXAMPLE
     $matches | Remove-MailboxExtendedProperty -Identity user@contoso.com -WhatIf
@@ -43,8 +39,6 @@ function Remove-MailboxExtendedProperty {
 
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [Alias('SearchResult')]
-        [psobject]$MessagesWithExtendedProperty,
-
         [psobject]$MailboxExtendedProperty,
 
         [ValidateRange(1, 1000)]
@@ -55,31 +49,7 @@ function Remove-MailboxExtendedProperty {
 
         [switch]$Verify,
 
-        [switch]$PassThru,
-
-        [ValidateSet('AutoResolve', 'AlwaysOverwrite', 'NeverOverwrite')]
-        [string]$ConflictResolution = 'AutoResolve',
-
-        [string]$EwsUrl,
-
-        [string]$EwsManagedApiPath,
-
-        [System.Management.Automation.PSCredential]$Credential,
-
-        [switch]$UseDefaultCredentials,
-
-        [string]$ExchangeVersion,
-
-        [ValidateRange(1, 600)]
-        [int]$RequestTimeoutSeconds,
-
-        [switch]$TraceEnabled,
-
-        [string]$TraceFilePath,
-
-        [switch]$Impersonate,
-
-        [switch]$TrustAll
+        [switch]$PassThru
     )
 
     begin {
@@ -91,18 +61,6 @@ function Remove-MailboxExtendedProperty {
         if (-not $PSBoundParameters.ContainsKey('RetryCount')) {
             $RetryCount = if ($script:ConnectionOptions -and $script:ConnectionOptions.PSObject.Properties['RetryCount']) { [int]$script:ConnectionOptions.RetryCount } else { 3 }
         }
-        $serviceArguments = @{}
-        foreach ($connectionParameter in @('EwsUrl', 'EwsManagedApiPath', 'Credential', 'ExchangeVersion', 'RequestTimeoutSeconds', 'TraceFilePath')) {
-            if ($PSBoundParameters.ContainsKey($connectionParameter)) {
-                $serviceArguments[$connectionParameter] = $PSBoundParameters[$connectionParameter]
-            }
-        }
-        foreach ($switchParameter in @('UseDefaultCredentials', 'TraceEnabled', 'Impersonate', 'TrustAll')) {
-            if ($PSBoundParameters.ContainsKey($switchParameter)) {
-                $serviceArguments[$switchParameter] = $PSBoundParameters[$switchParameter]
-            }
-        }
-
         function Get-RemovalErrorCode {
             param([string]$Message, [string]$ServiceErrorCode, [Exception]$Exception)
 
@@ -130,6 +88,9 @@ function Remove-MailboxExtendedProperty {
             param($Entry)
 
             $removalCounts[$Entry.Outcome]++
+            if ($PassThru -and $Entry.Outcome -eq 'Removed') {
+                Write-Host ('ExtendedPropertyId: {0} | Subject: {1}' -f $Entry.Definition.Identity, $Entry.Subject)
+            }
             [pscustomobject]@{
                 PSTypeName      = 'ExchangeNamedProperties.RemovalResult'
                 MailboxIdentity = $Entry.MailboxIdentity
@@ -178,7 +139,7 @@ function Remove-MailboxExtendedProperty {
                     if (-not $statesById.ContainsKey($entry.ItemId)) {
                         $state = [pscustomobject]@{
                             ItemId        = $entry.ItemId
-                            Item          = $null
+                            BoundItem     = $null
                             Entries       = New-Object 'System.Collections.Generic.List[object]'
                             Outcomes      = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([StringComparer]::Ordinal)
                             UpdateFailure = $null
@@ -202,15 +163,17 @@ function Remove-MailboxExtendedProperty {
                     for ($index = 0; $index -lt $states.Count; $index++) {
                         $state = $states[$index]
                         $response = if ($index -lt $bindResponses.Count) { $bindResponses[$index] } else { $null }
-                        if (-not $response -or [string]$response.Result -eq 'Error' -or -not $response.Item) {
+                        $itemProperty = if ($response) { $response.PSObject.Properties['Item'] } else { $null }
+                        $boundItem = if ($itemProperty -and $itemProperty -isnot [System.Management.Automation.PSParameterizedProperty]) { $itemProperty.Value } else { $null }
+                        if (-not $response -or [string]$response.Result -eq 'Error' -or -not $boundItem) {
                             $serviceErrorCode = if ($response) { [string]$response.ErrorCode } else { $null }
-                            $message = if ($response -and $response.ErrorMessage) { [string]$response.ErrorMessage } else { 'EWS did not return the item.' }
+                            $message = if ($response -and $response.ErrorMessage) { [string]$response.ErrorMessage } elseif ($itemProperty -is [System.Management.Automation.PSParameterizedProperty]) { 'EWS returned an Item member that PowerShell could not resolve to an item object.' } else { 'EWS did not return the item.' }
                             foreach ($entry in $state.Entries) {
                                 Set-RemovalFailure -Entry $entry -ErrorCode (Get-RemovalErrorCode -Message $message -ServiceErrorCode $serviceErrorCode) -ErrorMessage $message
                             }
                             continue
                         }
-                        $state.Item = $response.Item
+                        $state.BoundItem = $boundItem
                         $boundStates.Add($state)
                     }
                 }
@@ -232,8 +195,8 @@ function Remove-MailboxExtendedProperty {
                             continue
                         }
                         $existingValue = $null
-                        if ($state.Item.TryGetProperty($entry.EwsDefinition, [ref]$existingValue)) {
-                            [void]$state.Item.RemoveExtendedProperty($entry.EwsDefinition)
+                        if ($state.BoundItem.TryGetProperty($entry.EwsDefinition, [ref]$existingValue)) {
+                            [void]$state.BoundItem.RemoveExtendedProperty($entry.EwsDefinition)
                             $state.Outcomes[$definitionKey] = 'Removed'
                         }
                         else {
@@ -247,7 +210,7 @@ function Remove-MailboxExtendedProperty {
 
                 if ($dirtyStates.Count -gt 0) {
                     try {
-                        $updateResponses = @(Update-EwsItemBatch -Service $Service -Item @($dirtyStates | ForEach-Object { $_.Item }) -ConflictResolution $ConflictResolution -RetryCount $RetryCount)
+                        $updateResponses = @(Update-EwsItemBatch -Service $Service -Item @($dirtyStates | ForEach-Object { $_.BoundItem }) -RetryCount $RetryCount)
                         for ($index = 0; $index -lt $dirtyStates.Count; $index++) {
                             $response = if ($index -lt $updateResponses.Count) { $updateResponses[$index] } else { $null }
                             if (-not $response -or [string]$response.Result -eq 'Error') {
@@ -298,17 +261,19 @@ function Remove-MailboxExtendedProperty {
                         for ($index = 0; $index -lt $verifyStates.Count; $index++) {
                             $state = $verifyStates[$index]
                             $response = if ($index -lt $verifyResponses.Count) { $verifyResponses[$index] } else { $null }
+                            $itemProperty = if ($response) { $response.PSObject.Properties['Item'] } else { $null }
+                            $verifiedItem = if ($itemProperty -and $itemProperty -isnot [System.Management.Automation.PSParameterizedProperty]) { $itemProperty.Value } else { $null }
                             foreach ($entry in @($state.Entries | Where-Object { $_.Outcome -ne 'Failed' })) {
                                 if ($verifyFailure) {
                                     Set-RemovalFailure -Entry $entry -ErrorCode 'VerificationFailed' -ErrorMessage $verifyFailure
                                 }
-                                elseif (-not $response -or [string]$response.Result -eq 'Error' -or -not $response.Item) {
-                                    $message = if ($response -and $response.ErrorMessage) { [string]$response.ErrorMessage } else { 'EWS did not return the item.' }
+                                elseif (-not $response -or [string]$response.Result -eq 'Error' -or -not $verifiedItem) {
+                                    $message = if ($response -and $response.ErrorMessage) { [string]$response.ErrorMessage } elseif ($itemProperty -is [System.Management.Automation.PSParameterizedProperty]) { 'EWS returned an Item member that PowerShell could not resolve to an item object.' } else { 'EWS did not return the item.' }
                                     Set-RemovalFailure -Entry $entry -ErrorCode 'VerificationFailed' -ErrorMessage "Verification bind failed: $message"
                                 }
                                 else {
                                     $remainingValue = $null
-                                    if ($response.Item.TryGetProperty($entry.EwsDefinition, [ref]$remainingValue)) {
+                                    if ($verifiedItem.TryGetProperty($entry.EwsDefinition, [ref]$remainingValue)) {
                                         Set-RemovalFailure -Entry $entry -ErrorCode 'VerificationFailed' -ErrorMessage 'The extended property is still present after the update.'
                                     }
                                     else {
@@ -329,11 +294,11 @@ function Remove-MailboxExtendedProperty {
 
     process {
         $totalCount++
-        $inputResult = $MessagesWithExtendedProperty
+        $inputResult = $MailboxExtendedProperty
         $sourceAddress = if ($inputResult.PSObject.Properties['PrimarySmtpAddress']) { [string]$inputResult.PrimarySmtpAddress } else { $null }
         $sourceIdentity = if ($sourceAddress) { $sourceAddress } elseif ($inputResult.PSObject.Properties['MailboxIdentity']) { [string]$inputResult.MailboxIdentity } else { $null }
         $effectiveIdentity = if ($Identity) { $Identity } else { $sourceIdentity }
-        $propertyDefinition = if ($MailboxExtendedProperty) { $MailboxExtendedProperty } else { $inputResult }
+        $propertyDefinition = $inputResult
         $propertySetId = if ($propertyDefinition.PSObject.Properties['PropertySetId']) { [string]$propertyDefinition.PropertySetId } else { $null }
         if (-not $propertySetId -and $propertyDefinition.PSObject.Properties['PropertyNamespace']) {
             $propertySetId = [string]$propertyDefinition.PropertyNamespace
@@ -443,7 +408,7 @@ function Remove-MailboxExtendedProperty {
                 $service = $null
                 $serviceFailure = $null
                 try {
-                    $service = Get-EwsService @serviceArguments -Identity $mailboxEntries[0].ServiceIdentity
+                    $service = Get-EwsService -Identity $mailboxEntries[0].ServiceIdentity
                 }
                 catch {
                     $serviceFailure = $_.Exception

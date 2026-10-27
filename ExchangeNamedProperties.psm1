@@ -46,12 +46,9 @@ Export-ModuleMember -Function @(
 )
 
 $skipExchangeShell = $ImportOptions -and $ImportOptions.ContainsKey('SkipExchangeShell') -and [bool]$ImportOptions['SkipExchangeShell']
-if ($skipExchangeShell) {
-    Write-Host (Get-ExchangeNamedPropertiesBanner -Version $script:ModuleVersion)
-}
-else {
+Write-Host (Get-ExchangeNamedPropertiesBanner -Version $script:ModuleVersion)
+if (-not $skipExchangeShell) {
     $exchangeShellStatus = Import-ExchangeManagementShell
-    Write-Host (Get-ExchangeNamedPropertiesBanner -Version $script:ModuleVersion)
     if ($exchangeShellStatus.Detected) {
         Write-Host 'Exchange Management Shell cmdlets detected.'
     }
