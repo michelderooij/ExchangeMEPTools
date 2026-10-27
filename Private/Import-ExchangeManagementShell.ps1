@@ -13,17 +13,17 @@ function Import-ExchangeManagementShell {
         $installPath = Get-ExchangeInstallPath
     }
     catch {
-        Write-Warning "ExchangeNamedProperties depends on the Exchange Management Shell. Exchange install path lookup failed: $($_.Exception.Message)"
+        Write-Warning "ExchangeMEPTools depends on the Exchange Management Shell. Exchange install path lookup failed: $($_.Exception.Message)"
         return [pscustomobject]@{ Loaded = $false; Detected = $false; Connected = $false; MissingCommands = $missingCommands }
     }
     if ([string]::IsNullOrWhiteSpace($installPath)) {
-        Write-Warning 'ExchangeNamedProperties depends on the Exchange Management Shell. Exchange install path could not be determined.'
+        Write-Warning 'ExchangeMEPTools depends on the Exchange Management Shell. Exchange install path could not be determined.'
         return [pscustomobject]@{ Loaded = $false; Detected = $false; Connected = $false; MissingCommands = $missingCommands }
     }
 
     $remoteExchangeScript = Join-Path $installPath 'Bin\RemoteExchange.ps1'
     if (-not (Test-Path -LiteralPath $remoteExchangeScript -PathType Leaf)) {
-        Write-Warning "ExchangeNamedProperties depends on the Exchange Management Shell. RemoteExchange.ps1 was not found at '$remoteExchangeScript'."
+        Write-Warning "ExchangeMEPTools depends on the Exchange Management Shell. RemoteExchange.ps1 was not found at '$remoteExchangeScript'."
         return [pscustomobject]@{ Loaded = $false; Detected = $false; Connected = $false; MissingCommands = $missingCommands }
     }
 
@@ -38,7 +38,7 @@ function Import-ExchangeManagementShell {
         Connect-ExchangeServer -Auto | Out-Null
     }
     catch {
-        Write-Warning "ExchangeNamedProperties depends on the Exchange Management Shell. EMS loading failed: $($_.Exception.Message)"
+        Write-Warning "ExchangeMEPTools depends on the Exchange Management Shell. EMS loading failed: $($_.Exception.Message)"
         return [pscustomobject]@{ Loaded = $false; Detected = $false; Connected = $false; MissingCommands = $missingCommands }
     }
     finally {
@@ -49,23 +49,10 @@ function Import-ExchangeManagementShell {
             -not (Get-Command -Name $_ -ErrorAction SilentlyContinue)
         })
     if ($missingCommands.Count -gt 0) {
-        Write-Warning "ExchangeNamedProperties depends on the Exchange Management Shell. Required cmdlet(s) are still unavailable: $($missingCommands -join ', ')."
+        Write-Warning "ExchangeMEPTools depends on the Exchange Management Shell. Required cmdlet(s) are still unavailable: $($missingCommands -join ', ')."
         return [pscustomobject]@{ Loaded = $false; Detected = $false; Connected = $false; MissingCommands = $missingCommands }
     }
 
     [pscustomobject]@{ Loaded = $true; Detected = $false; Connected = $true; MissingCommands = @() }
 }
 
-function Get-ExchangeNamedPropertiesBanner {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Version
-    )
-
-    @(
-        '*' * 78
-        "ExchangeNamedProperties version $Version"
-        '*' * 78
-    ) -join [Environment]::NewLine
-}

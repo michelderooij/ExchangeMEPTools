@@ -11,7 +11,7 @@ function Enable-EwsTrustAll {
 
     $trustState = $script:EwsTrustPolicyState
     if (-not $trustState) {
-        throw 'TrustAll certificate policy state is unavailable. Reload the ExchangeNamedProperties module.'
+        throw 'TrustAll certificate policy state is unavailable. Reload the ExchangeMEPTools module.'
     }
 
     [System.Threading.Monitor]::Enter($trustState.SyncRoot)

@@ -1,11 +1,12 @@
 # Changelog
 
-Notable changes to ExchangeNamedProperties are recorded here.
+Notable changes to ExchangeMEPTools are recorded here.
 
 ## [Unreleased]
 
 ### Added
 
+- Renamed the module to `ExchangeMEPTools` (Mailbox Extended Property tools). Import `ExchangeMEPTools.psd1`; public command names and existing result-object type names are unchanged. The former `ExchangeNamedProperties` and `ExchangeMailboxExtendedPropertyCleaner` import filenames have been retired.
 - Initial Windows PowerShell 5.1 module manifest and loader.
 - Session-scoped EWS connection configuration with current Windows credentials by default, optional PSCredential, and HTTPS-only Autodiscover redirection validation.
 - Store named-property mapping provider based on Exchange mailbox metadata and `Get-StoreQuery`.

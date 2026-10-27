@@ -9,7 +9,7 @@ $script:RequiredExchangeManagementShellCommands = @(
     'Get-MailboxDatabase'
     'Get-ExchangeDiagnosticInfo'
 )
-$script:ModuleVersion = (Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot 'ExchangeNamedProperties.psd1')).ModuleVersion
+$script:ModuleVersion = (Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot 'ExchangeMEPTools.psd1')).ModuleVersion
 
 $script:ConnectionOptions = $null
 $script:EwsServiceCache = @{}
@@ -29,9 +29,6 @@ Get-ChildItem -Path (Join-Path $PSScriptRoot 'Public') -Filter '*.ps1' -File |
 Sort-Object -Property Name |
 ForEach-Object { . $_.FullName }
 
-Set-Alias -Name Connect-ExchangeNamedProperties -Value Connect-EWSSession -Scope Script
-Set-Alias -Name Disconnect-ExchangeNamedProperties -Value Disconnect-EWSSession -Scope Script
-
 Export-ModuleMember -Function @(
     'Connect-EWSSession'
     'Disconnect-EWSSession'
@@ -40,13 +37,15 @@ Export-ModuleMember -Function @(
     'Search-MailboxExtendedProperty'
     'Test-MailboxExtendedProperty'
     'Remove-MailboxExtendedProperty'
-) -Alias @(
-    'Connect-ExchangeNamedProperties'
-    'Disconnect-ExchangeNamedProperties'
-)
+) -Alias @()
 
 $skipExchangeShell = $ImportOptions -and $ImportOptions.ContainsKey('SkipExchangeShell') -and [bool]$ImportOptions['SkipExchangeShell']
-Write-Host (Get-ExchangeNamedPropertiesBanner -Version $script:ModuleVersion)
+
+Write-Host ('***********************************************************************')
+Write-Host ('Exchange Mailbox Extended Property Tools v{0}' -f $script:ModuleVersion)
+Write-Host 'https://github.com/michelderooij/ExchangeMEPTools'
+Write-Host '***********************************************************************'
+
 if (-not $skipExchangeShell) {
     $exchangeShellStatus = Import-ExchangeManagementShell
     if ($exchangeShellStatus.Detected) {

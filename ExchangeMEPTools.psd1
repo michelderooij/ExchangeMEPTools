@@ -1,5 +1,5 @@
 @{
-    RootModule        = 'ExchangeNamedProperties.psm1'
+    RootModule        = 'ExchangeMEPTools.psm1'
     ModuleVersion     = '0.1.0'
     GUID              = '2f72888d-bb2e-4b6e-9b3d-44f3fd1d7c93'
     Author            = 'ExchangeNamedProperties contributors'
@@ -18,10 +18,7 @@
     )
     CmdletsToExport   = @()
     VariablesToExport = @()
-    AliasesToExport   = @(
-        'Connect-ExchangeNamedProperties'
-        'Disconnect-ExchangeNamedProperties'
-    )
+    AliasesToExport   = @()
     PrivateData       = @{
         PSData = @{
             Tags         = @('Exchange', 'EWS', 'MAPI', 'NamedProperties')
