@@ -1,0 +1,292 @@
+name: Publish ExchangeMEPTools
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional version tag to publish; if omitted, the latest v* tag is used'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: psgallery-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: psgallery
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: release
+        shell: pwsh
+        run: |
+          $tag = '${{ inputs.version }}'
+
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $refType = '${{ github.ref_type }}'
+            $refName = '${{ github.ref_name }}'
+
+            if ($refType -eq 'tag' -and $refName -match '^v') {
+              $tag = $refName
+            }
+            else {
+              git fetch --tags --force
+
+              if ($LASTEXITCODE -ne 0) {
+                throw 'Could not retrieve repository tags.'
+              }
+
+              $tag = git tag `
+                --list 'v*' `
+                --sort=-v:refname |
+                Where-Object {
+                  $_ -match '^v\d+\.\d+\.\d+(\.\d+)?(-[0-9A-Za-z.-]+)?$'
+                } |
+                Select-Object -First 1
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw 'No version tag was provided and no matching repository tag was found.'
+          }
+
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+(\.\d+)?)(-(?<prerelease>[0-9A-Za-z.-]+))?$') {
+            throw "Tag '$tag' is not a supported version tag. Expected a value such as v1.2.3 or v1.2.3-preview1."
+          }
+
+          $version = $Matches.version
+          $prerelease = $Matches.prerelease
+
+          git rev-parse --verify "$tag^{commit}" *> $null
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Tag '$tag' does not exist or does not point to a commit."
+          }
+
+          "tag=$tag" | Out-File `
+            -FilePath $env:GITHUB_OUTPUT `
+            -Append `
+            -Encoding utf8
+
+          "version=$version" | Out-File `
+            -FilePath $env:GITHUB_OUTPUT `
+            -Append `
+            -Encoding utf8
+
+          "prerelease=$prerelease" | Out-File `
+            -FilePath $env:GITHUB_OUTPUT `
+            -Append `
+            -Encoding utf8
+
+          Write-Host "Release tag: $tag"
+          Write-Host "Module version: $version"
+
+          if (-not [string]::IsNullOrWhiteSpace($prerelease)) {
+            Write-Host "Prerelease label: $prerelease"
+          }
+
+      - name: Prepare module package
+        shell: pwsh
+        run: |
+          $moduleName = 'ExchangeMEPTools'
+          $tag = '${{ steps.release.outputs.tag }}'
+
+          $stage = Join-Path $env:RUNNER_TEMP $moduleName
+          $archive = Join-Path $env:RUNNER_TEMP "$moduleName.tar"
+
+          if (Test-Path $stage) {
+            Remove-Item $stage -Recurse -Force
+          }
+
+          if (Test-Path $archive) {
+            Remove-Item $archive -Force
+          }
+
+          New-Item `
+            -ItemType Directory `
+            -Path $stage `
+            -Force |
+            Out-Null
+
+          # Export only tracked files from the selected release tag.
+          git archive `
+            --format=tar `
+            --output=$archive `
+            $tag
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not create an archive for tag '$tag'."
+          }
+
+          tar -xf $archive -C $stage
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not extract the repository archive to '$stage'."
+          }
+
+          Remove-Item $archive -Force
+
+          # Repository and development files that must not be published.
+          $excludedItems = @(
+            '.github',
+            '.gitignore',
+            '.gitattributes',
+            '.editorconfig',
+            '.vscode',
+            '.idea',
+            'CODEOWNERS',
+            'CONTRIBUTING.md',
+            'SECURITY.md'
+          )
+
+          foreach ($item in $excludedItems) {
+            $path = Join-Path $stage $item
+
+            if (Test-Path $path) {
+              Remove-Item $path -Recurse -Force
+              Write-Host "Excluded: $item"
+            }
+          }
+
+          $manifest = Join-Path $stage "$moduleName.psd1"
+
+          if (-not (Test-Path $manifest -PathType Leaf)) {
+            throw "Module manifest not found: $manifest"
+          }
+
+          "MODULE_STAGE=$stage" | Out-File `
+            -FilePath $env:GITHUB_ENV `
+            -Append `
+            -Encoding utf8
+
+          "MODULE_MANIFEST=$manifest" | Out-File `
+            -FilePath $env:GITHUB_ENV `
+            -Append `
+            -Encoding utf8
+
+          Write-Host ''
+          Write-Host "Module package prepared in: $stage"
+          Write-Host 'Package contents:'
+
+          Get-ChildItem `
+            -Path $stage `
+            -Recurse `
+            -Force |
+            ForEach-Object {
+          .IO.Path]::GetRelativePath(
+                $stage,
+                $_.FullName
+              )
+
+              Write-Host "  $relativePath"
+            }
+
+      - name: Set module version
+        shell: pwsh
+        run: |
+          $version = '${{ steps.release.outputs.version }}'
+          $prerelease = '${{ steps.release.outputs.prerelease }}'
+
+          if (-not (Test-Path $env:MODULE_MANIFEST -PathType Leaf)) {
+            throw "Module manifest not found: $env:MODULE_MANIFEST"
+          }
+
+          $manifestParameters = @{
+            Path          = $env:MODULE_MANIFEST
+            ModuleVersion = $version
+          }
+
+          if (-not :IsNullOrWhiteSpace($prerelease)) {
+            $manifestParameters.Prerelease = $prerelease
+          }
+
+          Update-ModuleManifest @manifestParameters
+
+          Write-Host "ModuleVersion set to $version"
+
+          if (-not :IsNullOrWhiteSpace($prerelease)) {
+            Write-Host "Prerelease set to $prerelease"
+          }
+
+      - name: Validate module package
+        shell: pwsh
+        run: |
+          $manifest = Test-ModuleManifest `
+            -Path $env:MODULE_MANIFEST `
+            -ErrorAction Stop
+
+          if ($manifest.Name -ne 'ExchangeMEPTools') {
+            throw "Unexpected module name '$($manifest.Name)'. Expected 'ExchangeMEPTools'."
+          }
+
+          Write-Host ''
+          Write-Host 'Validated module package:'
+          Write-Host "  Name:       $($manifest.Name)"
+          Write-Host "  Version:    $($manifest.Version)"
+          Write-Host "  ModuleBase: $($manifest.ModuleBase)"
+
+          if ($manifest.PrivateData.PSData.Prerelease) {
+            Write-Host "  Prerelease: $($manifest.PrivateData.PSData.Prerelease)"
+          }
+
+      - name: Install PSResourceGet
+        shell: pwsh
+        run: |
+          Install-Module `
+            -Name Microsoft.PowerShell.PSResourceGet `
+            -Scope CurrentUser `
+            -Repository PSGallery `
+            -Force `
+            -ErrorAction Stop
+
+          Import-Module `
+            -Name Microsoft.PowerShell.PSResourceGet `
+            -Force `
+            -ErrorAction Stop
+
+          $repository = Get-PSResourceRepository `
+            -Name PSGallery `
+            -ErrorAction SilentlyContinue
+
+          if (-not $repository) {
+            Register-PSResourceRepository -PSGallery
+          }
+
+          Set-PSResourceRepository `
+            -Name PSGallery `
+            -Trusted
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.GALLERY_API_KEY }}
+        run: |
+          if (:IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
+            throw 'The PowerShell Gallery API key is empty.'
+          }
+
+          Import-Module `
+            -Name Microsoft.PowerShell.PSResourceGet `
+            -Force `
+            -ErrorAction Stop
+
+          Publish-PSResource `
+            -Path $env:MODULE_STAGE `
+            -Repository PSGallery `
+            -ApiKey $env:PSGALLERY_API_KEY `
+            -Verbose `
+            -ErrorAction Stop
