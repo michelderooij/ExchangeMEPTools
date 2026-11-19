@@ -1,6 +1,6 @@
 @{
     RootModule        = 'ExchangeMEPTools.psm1'
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.9.0'
     GUID              = '2f72888d-bb2e-4b6e-9b3d-44f3fd1d7c93'
     Author            = 'Michel de Rooij'
     CompanyName       = 'EighTwOne'
@@ -24,7 +24,7 @@
             Tags         = @('Exchange', 'EWS', 'MAPI', 'NamedProperties', 'ExtendedProperties')
             LicenseUri   = 'https://opensource.org/license/mit'
             ProjectUri   = 'https://github.com/'
-            ReleaseNotes = 'Initial implementation in progress.'
+            ReleaseNotes = 'Version 0.9.0; see CHANGELOG.md.'
         }
     }
 }

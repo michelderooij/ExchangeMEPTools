@@ -2,7 +2,7 @@
 
 Notable changes to ExchangeMEPTools are recorded here.
 
-## [Unreleased]
+## [0.9.0] - 2026-11-19
 
 ### Added
 
