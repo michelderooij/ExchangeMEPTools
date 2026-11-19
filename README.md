@@ -1,4 +1,4 @@
-# ExchangeNamedProperties
+# ExchangeMEPTools
 
 PowerShell module for inventorying, searching, assessing, and removing MAPI named properties in Exchange Server on-premises mailboxes.
 
@@ -20,7 +20,7 @@ PowerShell module for inventorying, searching, assessing, and removing MAPI name
 - Microsoft.Exchange.WebServices.dll for EWS search/removal. The DLL is not bundled. See [lib/README.md](lib/README.md).
 - An Exchange Server on-premises EWS endpoint enabled for the mailbox.
 
-When EMS cmdlets are already available, import displays a detection notice and the module version/command summary. If they are missing, the module looks for the Exchange install path in `$exinstallpath`, `$env:ExchangeInstallPath`, and the Exchange v15 registry setup key, then attempts to load EMS. A successful automatic connection displays a loading notice and suppresses the summary; if EMS cannot be loaded, a dependency warning is shown and import completes. To suppress the automatic EMS load attempt (for example, in build scripts), use `Import-Module ExchangeNamedProperties.psd1 -ArgumentList @{ SkipExchangeShell = $true }`.
+When EMS cmdlets are already available, import displays a detection notice and the module version/command summary. If they are missing, the module looks for the Exchange install path in `$exinstallpath`, `$env:ExchangeInstallPath`, and the Exchange v15 registry setup key, then attempts to load EMS. A successful automatic connection displays a loading notice and suppresses the summary; if EMS cannot be loaded, a dependency warning is shown and import completes. To suppress the automatic EMS load attempt (for example, in build scripts), use `Import-Module ExchangeMEPTools.psd1 -ArgumentList @{ SkipExchangeShell = $true }`.
 
 ## Authentication and Permissions
 
@@ -100,7 +100,7 @@ With `-Identity`, the report includes only that mailbox's cached service and end
 
 EWS does not expose Exchange Management Role assignments; use Exchange Management Shell to inspect RBAC assignments.
 
-The former `Connect-ExchangeNamedProperties` and `Disconnect-ExchangeNamedProperties` names remain as compatibility aliases. The EWS DLL can be supplied through `-EwsManagedApiPath`, placed in the current working directory, module directory, module `lib` directory, or installed in a standard EWS Managed API location. Certificate validation is enabled by default. Safe connection traces do not include SOAP payloads or credentials.
+The EWS DLL can be supplied through `-EwsManagedApiPath`, placed in the current working directory, module directory, module `lib` directory, or installed in a standard EWS Managed API location. Certificate validation is enabled by default. Safe connection traces do not include SOAP payloads or credentials.
 
 For controlled testing only, `-TrustAll` explicitly accepts certificate errors for the authority in the supplied HTTPS `EwsUrl`. It cannot be used with Autodiscover, emits a warning, and remains active for that authority until `Disconnect-EWSSession`. This modifies the process-wide .NET callback, but the callback is host-and-port scoped and delegates every other authority to the previous validation policy. Do not use it in production; install a valid certificate matching the EWS endpoint instead.
 

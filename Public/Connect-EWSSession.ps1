@@ -71,7 +71,7 @@ function Connect-EWSSession {
     Opt in to bypass certificate validation for the explicit EWS URL authority only. This is insecure and intended only for controlled testing. It requires EwsUrl and remains active until Disconnect-EWSSession.
 
     .EXAMPLE
-    Connect-EWSSession -EwsUrl $env:EXCHANGE_EWS_URL
+    Connect-EWSSession -EwsUrl mail.contoso.com
 
     .EXAMPLE
     Connect-EWSSession -Identity user@contoso.com -UseDefaultCredentials
@@ -165,8 +165,8 @@ function Connect-EWSSession {
         EwsManagedApiPath             = $EwsManagedApiPath
         Credential                    = $Credential
         UseDefaultCredentials         = -not [bool]$Credential
-        AuthenticationMethod         = $authenticationMethod
-        AuthenticationIdentity       = $authenticationIdentity
+        AuthenticationMethod          = $authenticationMethod
+        AuthenticationIdentity        = $authenticationIdentity
         Identity                      = $Identity
         ExchangeVersion               = $ExchangeVersion
         RequestTimeoutSeconds         = $RequestTimeoutSeconds
@@ -174,7 +174,7 @@ function Connect-EWSSession {
         TraceEnabled                  = [bool]$TraceEnabled
         TraceFilePath                 = $TraceFilePath
         Impersonate                   = [bool]$Impersonate
-        TrustAll                       = [bool]$TrustAll
+        TrustAll                      = [bool]$TrustAll
         ExchangeManagementShellLoaded = $exchangeShellStatus.ExchangeManagementShellLoaded
     }
 
@@ -196,14 +196,14 @@ function Connect-EWSSession {
     }
 
     [pscustomobject]@{
-        PSTypeName           = 'ExchangeNamedProperties.EWSSession'
-        Connected            = $true
-        Identity             = if ($Identity) { $Identity } else { $null }
-        PrimarySmtpAddress   = if ($Identity) { $mailbox.PrimarySmtpAddress } else { $null }
-        EwsUrl               = if ($Identity -and $service) { $service.Url.AbsoluteUri } else { $EwsUrl }
-        Authentication       = $authenticationMethod
+        PSTypeName             = 'ExchangeNamedProperties.EWSSession'
+        Connected              = $true
+        Identity               = if ($Identity) { $Identity } else { $null }
+        PrimarySmtpAddress     = if ($Identity) { $mailbox.PrimarySmtpAddress } else { $null }
+        EwsUrl                 = if ($Identity -and $service) { $service.Url.AbsoluteUri } else { $EwsUrl }
+        Authentication         = $authenticationMethod
         AuthenticationIdentity = $authenticationIdentity
-        ImpersonationEnabled = [bool]$Impersonate
-        TrustAll             = [bool]$TrustAll
+        ImpersonationEnabled   = [bool]$Impersonate
+        TrustAll               = [bool]$TrustAll
     }
 }
