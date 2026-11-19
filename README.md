@@ -82,7 +82,7 @@ Removal deletes only the named property from an item, not the item itself. Revie
 
 ## Learn more
 
-For more information and usage examples, visit [eightwone.com](https://eightwone.com/).
+For more information and usage examples, visit [https://eightwone.com](https://eightwone.com/2026/11/19/exchange-named-property-exhaustion/)).
 
 ## Credits
 
