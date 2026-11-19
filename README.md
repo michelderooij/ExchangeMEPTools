@@ -1,5 +1,10 @@
 # ExchangeMEPTools
 
+![PowerShell Gallery Downloads](https://img.shields.io/powershellgallery/dt/ExchangeMEPTools)
+![GitHub Release](https://img.shields.io/github/v/release/michelderooij/ExchangeMEPTools)
+![GitHub forks](https://img.shields.io/github/forks/michelderooij/ExchangeMEPTools?style=lat-square)
+![GitHub forks](https://img.shields.io/github/stars/michelderooij/ExchangeMEPTools?style=flat-square)
+
 ExchangeMEPTools is a PowerShell module for managing MAPI named properties in Exchange Server on-premises mailboxes. Use it to:
 
 - Inventory a mailbox's named-property mappings.
