@@ -187,7 +187,7 @@ jobs:
             -Recurse `
             -Force |
             ForEach-Object {
-          .IO.Path]::GetRelativePath(
+              $relativePath = [System.IO.Path]::GetRelativePath(
                 $stage,
                 $_.FullName
               )
@@ -210,7 +210,7 @@ jobs:
             ModuleVersion = $version
           }
 
-          if (-not :IsNullOrWhiteSpace($prerelease)) {
+          if (-not [string]::IsNullOrWhiteSpace($prerelease)) {
             $manifestParameters.Prerelease = $prerelease
           }
 
@@ -218,7 +218,7 @@ jobs:
 
           Write-Host "ModuleVersion set to $version"
 
-          if (-not :IsNullOrWhiteSpace($prerelease)) {
+          if (-not [string]::IsNullOrWhiteSpace($prerelease)) {
             Write-Host "Prerelease set to $prerelease"
           }
 
@@ -275,7 +275,7 @@ jobs:
         env:
           PSGALLERY_API_KEY: ${{ secrets.GALLERY_API_KEY }}
         run: |
-          if (:IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
+          if ([string]::IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
             throw 'The PowerShell Gallery API key is empty.'
           }
 
